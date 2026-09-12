@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:watt}",
+            "name": "Debug Watt",
+            "target": "Watt",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Watt"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:watt}",
+            "name": "Release Watt",
+            "target": "Watt",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Watt"
+        }
+    ]
+}
