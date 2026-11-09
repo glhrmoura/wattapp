@@ -1,9 +1,32 @@
 import SwiftUI
 import AppKit
+import Observation
+
+@Observable
+final class AccentState: @unchecked Sendable {
+    nonisolated(unsafe) static let shared = AccentState()
+    var accent: Color = AccentState.defaultAccent
+    var accentText: Color = AccentState.defaultAccentText
+
+    static let defaultAccent = Color(red: 0x21 / 255, green: 0xC0 / 255, blue: 0x63 / 255)
+    static let defaultAccentText = Color(red: 0.84, green: 0.98, blue: 0.86)
+
+    func apply(theme: String?) {
+        guard let theme, let base = AccountTheme.color(theme)?.usingColorSpace(.sRGB) else {
+            accent = Self.defaultAccent
+            accentText = Self.defaultAccentText
+            return
+        }
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0
+        base.getHue(&h, saturation: &s, brightness: &b, alpha: nil)
+        accent = Color(hue: h, saturation: min(s, 0.75) * 0.8, brightness: 0.82)
+        accentText = Color(hue: h, saturation: min(s, 0.75) * 0.25, brightness: 0.97)
+    }
+}
 
 enum Palette {
-    static let accent = Color(red: 0x21 / 255, green: 0xC0 / 255, blue: 0x63 / 255)
-    static let accentText = Color(red: 0.84, green: 0.98, blue: 0.86)
+    static var accent: Color { AccentState.shared.accent }
+    static var accentText: Color { AccentState.shared.accentText }
     static let outgoingLight = Color(red: 0.86, green: 0.97, blue: 0.84)
     static let outgoingDark = Color(red: 19 / 255, green: 77 / 255, blue: 56 / 255)
     static let incomingLight = Color.white
