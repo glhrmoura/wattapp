@@ -5,6 +5,8 @@ struct AccountInfo: Codable, Identifiable, Hashable {
     let id: String
     var name: String
     var jid: String?
+    var theme: String?
+    var plainAccent: Bool?
 
     var phone: String? {
         jid.flatMap { $0.split(separator: "@").first }.map { Formatters.phone("+" + $0) }
@@ -16,6 +18,7 @@ struct AccountInfo: Codable, Identifiable, Hashable {
 final class AccountManager {
     var accounts: [AccountInfo] = []
     var currentID: String = ""
+    var settingsAccountID: String?
     @ObservationIgnored private(set) var stores: [String: ChatStore] = [:]
     @ObservationIgnored private let root: URL
     @ObservationIgnored private var accountsDir: URL { root.appendingPathComponent("accounts", isDirectory: true) }
@@ -71,6 +74,26 @@ final class AccountManager {
     func avatarPath(for account: AccountInfo) -> String? {
         guard let jid = account.jid else { return nil }
         return stores[account.id]?.avatarPath(for: jid)
+    }
+
+    var currentTheme: String? {
+        accounts.first { $0.id == currentID }?.theme
+    }
+
+    var currentAccentFollowsTheme: Bool {
+        accounts.first { $0.id == currentID }?.plainAccent != true
+    }
+
+    func setAccentFollowsTheme(_ id: String, _ follows: Bool) {
+        guard let i = accounts.firstIndex(where: { $0.id == id }) else { return }
+        accounts[i].plainAccent = follows ? nil : true
+        saveIndex()
+    }
+
+    func setTheme(_ id: String, hex: String?) {
+        guard let i = accounts.firstIndex(where: { $0.id == id }), accounts[i].theme != hex else { return }
+        accounts[i].theme = hex
+        saveIndex()
     }
 
     func unread(for account: AccountInfo) -> Int {
