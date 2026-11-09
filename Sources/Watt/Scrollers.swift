@@ -36,6 +36,7 @@ private final class ScrollerConfiguratorView: NSView {
         super.viewDidMoveToWindow()
         NotificationCenter.default.removeObserver(self)
         guard window != nil else { return }
+        configure()
         DispatchQueue.main.async { [weak self] in self?.configure() }
         NotificationCenter.default.addObserver(
             self,
@@ -49,11 +50,17 @@ private final class ScrollerConfiguratorView: NSView {
         DispatchQueue.main.async { [weak self] in self?.configure() }
     }
 
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        configure()
+    }
+
     private func configure() {
         guard let scrollView = enclosingScrollView else { return }
         if !(scrollView.verticalScroller is ThinScroller) {
             scrollView.verticalScroller = ThinScroller()
         }
+        guard scrollView.scrollerStyle != .overlay || !scrollView.autohidesScrollers || scrollView.hasHorizontalScroller else { return }
         scrollView.scrollerStyle = .overlay
         scrollView.autohidesScrollers = true
         scrollView.hasHorizontalScroller = false
