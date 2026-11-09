@@ -39,7 +39,6 @@ struct ConversationView: View {
                         }
                     }
                     .animation(.easeOut(duration: 0.2), value: undoable.isEmpty)
-                Divider()
                 if selecting {
                     selectionBar(chat)
                 } else {
