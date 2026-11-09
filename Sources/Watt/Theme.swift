@@ -98,12 +98,20 @@ struct WideLockIcon: View {
     }
 }
 
-struct WindowBackground: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { view.window?.backgroundColor = Palette.backgroundNS }
-        return view
+final class WindowAnchorView: NSView {
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        window.backgroundColor = Palette.backgroundNS
+        window.initialFirstResponder = self
+        window.makeFirstResponder(self)
     }
+}
+
+struct WindowBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { WindowAnchorView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
         nsView.window?.backgroundColor = Palette.backgroundNS
