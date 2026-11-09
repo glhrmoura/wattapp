@@ -20,6 +20,7 @@ struct ConversationView: View {
     @State private var recorder = VoiceRecorder()
     @State private var undoTask: Task<Void, Never>?
     @State private var flashID: Message.ID?
+    @State private var pasteMonitor = PasteMonitor()
 
     private var chat: Chat? { store.chat(chatID) }
 
@@ -115,7 +116,9 @@ struct ConversationView: View {
             .onAppear {
                 text = chat.draft
                 composerFocused = true
+                startPasteMonitor()
             }
+            .onChange(of: composerFocused) { _, focused in pasteMonitor.enabled = focused }
             .onChange(of: text) { _, newValue in store.updateDraft(newValue, for: chatID) }
             .dropDestination(for: URL.self) { urls, _ in
                 let files = urls.filter(\.isFileURL)
@@ -127,7 +130,10 @@ struct ConversationView: View {
             .sheet(isPresented: $showForward) {
                 ForwardSheet(messages: forwarding)
             }
-            .onDisappear { store.persistNow() }
+            .onDisappear {
+                pasteMonitor.stop()
+                store.persistNow()
+            }
         }
     }
 
@@ -537,6 +543,19 @@ struct ConversationView: View {
         showAttachMenu = false
         AttachmentPicker.choose(types: types) { urls in
             present(urls.map(make))
+        }
+    }
+
+    private func startPasteMonitor() {
+        let store = store
+        let chatID = chatID
+        pasteMonitor.enabled = true
+        pasteMonitor.start {
+            guard store.attachmentChatID == nil else { return false }
+            let items = PastedAttachments.read(from: .general, directory: store.baseURL.appendingPathComponent("outgoing"))
+            guard !items.isEmpty else { return false }
+            store.presentAttachments(items, for: chatID)
+            return true
         }
     }
 

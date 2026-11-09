@@ -116,6 +116,47 @@ struct Attachment: Identifiable, Hashable, Sendable {
     }
 }
 
+enum PastedAttachments {
+    static func read(from pasteboard: NSPasteboard, directory: URL) -> [Attachment] {
+        let files = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        if !files.isEmpty { return files.map(Attachment.dropped) }
+        guard pasteboard.string(forType: .string) == nil, let data = imageData(from: pasteboard) else { return [] }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("Imagem colada \(UUID().uuidString.prefix(8)).png")
+        guard (try? data.write(to: url)) != nil else { return [] }
+        return [Attachment(url: url, kind: .image)]
+    }
+
+    private static func imageData(from pasteboard: NSPasteboard) -> Data? {
+        if let png = pasteboard.data(forType: .png) { return png }
+        guard let image = NSImage(pasteboard: pasteboard),
+              let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
+        return bitmap.representation(using: .png, properties: [:])
+    }
+}
+
+final class PasteMonitor {
+    var enabled = false
+    private var monitor: Any?
+
+    func start(_ handler: @escaping () -> Bool) {
+        stop()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.enabled,
+                  event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                  event.charactersIgnoringModifiers?.lowercased() == "v",
+                  event.window?.isKeyWindow == true else { return event }
+            return handler() ? nil : event
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+    }
+}
+
 enum AttachmentPicker {
     @MainActor
     static func choose(types: [UTType], completion: @escaping ([URL]) -> Void) {
@@ -215,9 +256,8 @@ struct AttachmentPreview: View {
                     Spacer()
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
-            .frame(height: 62)
+            .padding(.horizontal, 12)
+            .frame(height: 64)
 
             Group {
                 if let current { AttachmentPage(item: current) }
@@ -287,6 +327,7 @@ struct AttachmentPreview: View {
             .padding(.vertical, 12)
             .background(Color.black)
         }
+        .ignoresSafeArea(.container, edges: .top)
         .foregroundStyle(.white)
         .background(Color(white: 0.07))
         .environment(\.colorScheme, .dark)

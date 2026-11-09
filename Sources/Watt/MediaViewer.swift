@@ -42,6 +42,7 @@ struct MediaViewer: View {
                     Divider().opacity(0.4)
                     footer
                 }
+                .ignoresSafeArea(.container, edges: .top)
             }
         }
         .focusable()
@@ -86,7 +87,7 @@ struct MediaViewer: View {
             toolbarButton("arrow.up.forward.app", help: "Abrir no Pré-Visualização") { openExternally(message) }
             toolbarButton("square.and.arrow.down", help: "Salvar") { save(message) }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .frame(height: 60)
         .foregroundStyle(.white)
     }
