@@ -4,8 +4,18 @@ struct ContentView: View {
     @Environment(ChatStore.self) private var store
 
     @Environment(AccountManager.self) private var accounts
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var windowSize: CGSize = .zero
 
     private var needsLogin: Bool { store.needsLogin }
+
+    private var theme: String? {
+        accounts.currentTheme.flatMap { AccountTheme.color($0) != nil ? $0 : nil }
+    }
+
+    private var accentTheme: String? {
+        accounts.currentAccentFollowsTheme ? theme : nil
+    }
 
     var body: some View {
         Group {
@@ -33,10 +43,18 @@ struct ContentView: View {
             } else {
                 NavigationSplitView {
                     VStack(spacing: 0) {
-                        Divider()
+                        if theme == nil {
+                            Divider()
+                        } else {
+                            HStack(spacing: 0) {
+                                Color.clear.frame(width: SideRail.width, height: 1)
+                                ThemeLine()
+                            }
+                        }
                         HStack(spacing: 0) {
                             SideRail()
-                            Divider()
+                                .environment(\.colorScheme, theme == nil ? colorScheme : .dark)
+                            if theme == nil { Divider() } else { ThemeLine(vertical: true) }
                             Group {
                                 if store.isComposing {
                                     NewChatView()
@@ -45,14 +63,23 @@ struct ContentView: View {
                                 }
                             }
                             .frame(maxWidth: .infinity)
+                            .background {
+                                ThemedPanelBackground(theme: theme)
+                            }
                         }
                     }
-                    .background(Palette.background)
+                    .background {
+                        if let theme {
+                            WindowAlignedBackdrop(hex: theme).ignoresSafeArea()
+                        } else {
+                            Palette.background.ignoresSafeArea()
+                        }
+                    }
                         .navigationSplitViewColumnWidth(min: 360, ideal: 400, max: 500)
                         .toolbar(removing: .sidebarToggle)
                 } detail: {
                     VStack(spacing: 0) {
-                        Divider()
+                        if theme == nil { Divider() } else { ThemeLine() }
                         if let chat = store.selectedChat {
                             ConversationView(chatID: chat.id)
                                 .id(chat.id)
@@ -97,11 +124,37 @@ struct ContentView: View {
             }
         }
         .toolbar(store.viewerChatID == nil && store.attachmentChatID == nil ? .automatic : .hidden, for: .windowToolbar)
-        .background(Palette.background)
+        .environment(\.windowSize, windowSize)
+        .sheet(isPresented: Binding(
+            get: { accounts.settingsAccountID != nil },
+            set: { if !$0 { accounts.settingsAccountID = nil } }
+        )) {
+            if let id = accounts.settingsAccountID, let account = accounts.accounts.first(where: { $0.id == id }) {
+                SettingsSheet(account: account)
+                    .environment(accounts)
+            }
+        }
+        .background {
+            ChromeBackground(theme: theme)
+                .ignoresSafeArea()
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
+        }
         .background(WindowBackground())
+        .onChange(of: accentTheme, initial: true) { _, value in AccentState.shared.apply(theme: value) }
         .onReceive(NotificationCenter.default.publisher(for: .wattNewChat)) { _ in
             if !needsLogin { store.startComposing() }
         }
+    }
+}
+
+private struct ThemeLine: View {
+    var vertical = false
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.12))
+            .frame(width: vertical ? 1 : nil, height: vertical ? nil : 1)
+            .background(Palette.background, ignoresSafeAreaEdges: [])
     }
 }
 
