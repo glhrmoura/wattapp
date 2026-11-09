@@ -328,7 +328,12 @@ final class ChatStore {
     }
 
     func toggleLock(_ id: Chat.ID) {
-        mutate(id) { $0.isLocked.toggle() }
+        let unarchive = chat(id)?.isArchived ?? false
+        mutate(id) {
+            $0.isLocked.toggle()
+            if unarchive { $0.isArchived = false }
+        }
+        if unarchive { syncSetting("archive", id, false) }
         if chat(id)?.isLocked == true, !showLocked, selectedChatID == id { selectedChatID = nil }
     }
 

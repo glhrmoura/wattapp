@@ -236,7 +236,7 @@ struct AccountSwitcher: View {
     }
 
     private var othersUnread: Bool {
-        accounts.accounts.contains { $0.id != accounts.currentID && accounts.unread(for: $0) > 0 }
+        accounts.accounts.contains { $0.id != accounts.currentID && accounts.hasUnread(for: $0) }
     }
 
     var body: some View {
@@ -315,6 +315,10 @@ private struct AccountList: View {
                                 .padding(.horizontal, 5)
                                 .frame(minWidth: 18, minHeight: 18)
                                 .background(Capsule().fill(Palette.accent))
+                        } else if account.id != manager.currentID, manager.hasUnread(for: account) {
+                            Circle()
+                                .fill(Palette.accent)
+                                .frame(width: 8, height: 8)
                         }
                         if let index = manager.accounts.firstIndex(of: account), index < 9 {
                             Text("⌘\(index + 1)")

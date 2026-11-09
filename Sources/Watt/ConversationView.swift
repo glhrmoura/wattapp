@@ -83,7 +83,9 @@ struct ConversationView: View {
                         Divider()
                         Button(chat.isMuted ? "Reativar notificações" : "Silenciar notificações") { store.toggleMute(chatID) }
                         Button(chat.isPinned ? "Desafixar" : "Fixar") { store.togglePin(chatID) }
-                        Button(chat.isArchived ? "Desarquivar" : "Arquivar") { store.toggleArchive(chatID) }
+                        if !chat.isLocked {
+                            Button(chat.isArchived ? "Desarquivar" : "Arquivar") { store.toggleArchive(chatID) }
+                        }
                         Divider()
                         Button("Fechar conversa") { if selecting { stopSelecting() } else { store.select(nil) } }
                             .keyboardShortcut(.escape, modifiers: [])

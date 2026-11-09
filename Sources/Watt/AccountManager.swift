@@ -77,6 +77,11 @@ final class AccountManager {
         stores[account.id]?.unreadTotal ?? 0
     }
 
+    func hasUnread(for account: AccountInfo) -> Bool {
+        guard let store = stores[account.id] else { return false }
+        return store.unreadTotal > 0 || store.archivedUnreadCount > 0 || store.lockedUnreadCount > 0
+    }
+
     func shutdown() {
         for store in stores.values { store.shutdown() }
     }

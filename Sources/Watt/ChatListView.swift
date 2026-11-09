@@ -231,8 +231,10 @@ struct ChatMenu: View {
     let chat: Chat
 
     var body: some View {
-        Button(chat.isArchived ? "Desarquivar conversa" : "Arquivar conversa", systemImage: "archivebox") {
-            store.toggleArchive(chat.id)
+        if !chat.isLocked {
+            Button(chat.isArchived ? "Desarquivar conversa" : "Arquivar conversa", systemImage: "archivebox") {
+                store.toggleArchive(chat.id)
+            }
         }
         if chat.isMuted {
             Button("Reativar notificações", systemImage: "bell") { store.unmute(chat.id) }

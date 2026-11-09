@@ -2,11 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 swift build -c release --arch arm64 --arch x86_64
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 APP=build/Watt.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-cp .build/apple/Products/Release/Watt "$APP/Contents/MacOS/Watt"
+cp "$BIN/Watt" "$APP/Contents/MacOS/Watt"
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+xcrun vtool -set-build-version macos 15.0 "$SDK_VERSION" -replace -output "$APP/Contents/MacOS/Watt" "$APP/Contents/MacOS/Watt"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 export CC="$(xcrun -f clang)"
