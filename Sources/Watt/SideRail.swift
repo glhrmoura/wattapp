@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SideRail: View {
+    static let width: CGFloat = 76
     @Environment(ChatStore.self) private var store
     @State private var confirmLogout = false
 
@@ -38,7 +39,7 @@ struct SideRail: View {
         }
         .padding(.top, 14)
         .padding(.bottom, 16)
-        .frame(width: 76)
+        .frame(width: Self.width)
         .confirmationDialog("Sair desta conta?", isPresented: $confirmLogout) {
             Button("Sair", role: .destructive) { store.logout() }
         } message: {
@@ -135,7 +136,9 @@ private struct ProfileButton: View {
             .onHover { hovering = $0 }
             .help([current.name, current.phone].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
             .popover(isPresented: $open, arrowEdge: .trailing) {
-                ProfilePanel(account: current, confirmLogout: $confirmLogout) { open = false }
+                ProfilePanel(account: current, confirmLogout: $confirmLogout, openTheme: {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { accounts.settingsAccountID = current.id }
+                }) { open = false }
             }
         }
     }
@@ -145,6 +148,7 @@ private struct ProfilePanel: View {
     @Environment(ChatStore.self) private var store
     let account: AccountInfo
     @Binding var confirmLogout: Bool
+    let openTheme: () -> Void
     let dismiss: () -> Void
 
     private var name: String {
@@ -175,6 +179,12 @@ private struct ProfilePanel: View {
             Divider()
                 .padding(.horizontal, 6)
                 .padding(.bottom, 6)
+            PopoverRow {
+                dismiss()
+                openTheme()
+            } label: {
+                actionLabel("Configurações", systemImage: "gearshape", color: .primary)
+            }
             PopoverRow {
                 store.startBridge()
                 dismiss()
