@@ -5,7 +5,7 @@ swift build -c release --arch arm64 --arch x86_64
 BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 APP=build/Watt.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/pt-BR.lproj"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp "$BIN/Watt" "$APP/Contents/MacOS/Watt"
 SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
@@ -23,6 +23,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>Watt</string>
+  <key>CFBundleDevelopmentRegion</key><string>pt-BR</string>
+  <key>CFBundleLocalizations</key><array><string>pt-BR</string></array>
   <key>CFBundleDisplayName</key><string>Watt</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIdentifier</key><string>com.glhrmoura.watt</string>
