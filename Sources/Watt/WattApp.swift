@@ -40,6 +40,11 @@ struct WattApp: App {
         }
         .defaultSize(width: 1100, height: 720)
         .commands {
+            CommandGroup(replacing: .systemServices) {}
+            CommandGroup(replacing: .toolbar) {}
+            CommandGroup(replacing: .appSettings) {
+                Button("Configurações") { accounts.settingsAccountID = accounts.currentID }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Nova conversa") {
                     NotificationCenter.default.post(name: .wattNewChat, object: nil)
