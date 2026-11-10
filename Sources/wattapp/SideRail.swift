@@ -186,12 +186,6 @@ private struct ProfilePanel: View {
                 actionLabel("Configurações", systemImage: "gearshape", color: .primary)
             }
             PopoverRow {
-                store.startBridge()
-                dismiss()
-            } label: {
-                actionLabel("Reconectar", systemImage: "arrow.clockwise", color: .primary)
-            }
-            PopoverRow {
                 dismiss()
                 confirmLogout = true
             } label: {
