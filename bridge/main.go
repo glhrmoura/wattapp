@@ -1194,7 +1194,7 @@ func (b *bridge) readCommands() {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: watt-bridge <db-path>")
+		fmt.Fprintln(os.Stderr, "usage: wattapp-bridge <db-path>")
 		os.Exit(2)
 	}
 	ctx := context.Background()
@@ -1205,7 +1205,7 @@ func main() {
 	b.mediaSlot = make(chan struct{}, 3)
 	os.MkdirAll(b.mediaDir, 0o755)
 	logger := waLog.Noop
-	store.SetOSInfo("Watt (macOS)", [3]uint32{1, 0, 0})
+	store.SetOSInfo("WattApp (macOS)", [3]uint32{1, 0, 0})
 	store.DeviceProps.PlatformType = waCompanionReg.DeviceProps_DESKTOP.Enum()
 
 	dsn := "file:" + os.Args[1] + "?_foreign_keys=on"

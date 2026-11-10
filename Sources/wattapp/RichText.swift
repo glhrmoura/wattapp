@@ -3,7 +3,7 @@ import AppKit
 
 enum RichText {
     static let limit = 800
-    static let moreURL = URL(string: "watt-more://expand")!
+    static let moreURL = URL(string: "wattapp-more://expand")!
 
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
@@ -18,7 +18,7 @@ enum RichText {
         return String(cut[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static let intentKey = NSAttributedString.Key("wattIntent")
+    private static let intentKey = NSAttributedString.Key("wattappIntent")
 
     static func inline(_ text: String) -> AttributedString {
         let marked = NSMutableAttributedString(string: text)

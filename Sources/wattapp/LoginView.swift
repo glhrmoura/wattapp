@@ -49,7 +49,7 @@ struct LoginView: View {
                     .resizable()
                     .frame(width: 52, height: 52)
                     .padding(.leading, -4)
-                Text("Entrar no Watt")
+                Text("Entrar no WattApp")
                     .font(.system(size: 30, weight: .semibold))
                 Text("Use o WhatsApp do seu celular para conectar este Mac.")
                     .font(.system(size: 15))

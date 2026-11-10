@@ -24,7 +24,7 @@ struct WattApp: App {
     @State private var confirmLogout = false
 
     var body: some Scene {
-        WindowGroup("Watt") {
+        WindowGroup("WattApp") {
             ContentView()
                 .id(accounts.currentID)
                 .environment(accounts)
@@ -35,7 +35,7 @@ struct WattApp: App {
                 .confirmationDialog("Desconectar esta conta?", isPresented: $confirmLogout) {
                     Button("Desconectar", role: .destructive) { accounts.current.logout() }
                 } message: {
-                    Text("O Watt será removido dos aparelhos conectados desta conta e o histórico local dela será apagado.")
+                    Text("O WattApp será removido dos aparelhos conectados desta conta e o histórico local dela será apagado.")
                 }
         }
         .defaultSize(width: 1100, height: 720)
@@ -47,7 +47,7 @@ struct WattApp: App {
             }
             CommandGroup(replacing: .newItem) {
                 Button("Nova conversa") {
-                    NotificationCenter.default.post(name: .wattNewChat, object: nil)
+                    NotificationCenter.default.post(name: .wattappNewChat, object: nil)
                 }
                 .keyboardShortcut("n")
             }
@@ -74,5 +74,5 @@ struct WattApp: App {
 }
 
 extension Notification.Name {
-    static let wattNewChat = Notification.Name("wattNewChat")
+    static let wattappNewChat = Notification.Name("wattappNewChat")
 }

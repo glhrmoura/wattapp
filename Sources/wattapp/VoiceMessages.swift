@@ -19,7 +19,7 @@ enum OggOpus {
         output.append(page(packets: [head], granule: 0, serial: serial, sequence: &sequence, flags: 0x02))
 
         var tags = Data("OpusTags".utf8)
-        let vendor = Data("Watt".utf8)
+        let vendor = Data("WattApp".utf8)
         tags.appendLE(UInt32(vendor.count))
         tags.append(vendor)
         tags.appendLE(UInt32(0))
@@ -382,7 +382,7 @@ final class VoicePlayer: NSObject, AVAudioPlayerDelegate {
     @ObservationIgnored private var timer: Timer?
 
     static var cacheDirectory: URL {
-        let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Watt/audio")
+        let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("WattApp/audio")
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

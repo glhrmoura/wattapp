@@ -316,7 +316,7 @@ struct ConversationView: View {
                 }
                 Button("Cancelar", role: .cancel) {}
             } message: {
-                Text("Permita o acesso ao microfone para o Watt em Ajustes do Sistema › Privacidade e Segurança.")
+                Text("Permita o acesso ao microfone para o WattApp em Ajustes do Sistema › Privacidade e Segurança.")
             }
         }
     }

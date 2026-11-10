@@ -25,8 +25,9 @@ final class AccountManager {
     @ObservationIgnored private var indexURL: URL { root.appendingPathComponent("accounts.json") }
 
     init() {
-        root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Watt", isDirectory: true)
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        root = support.appendingPathComponent("WattApp", isDirectory: true)
+        Self.migrateRename(from: support.appendingPathComponent("Watt", isDirectory: true), to: root)
         try? FileManager.default.createDirectory(at: accountsDir, withIntermediateDirectories: true)
         accounts = loadIndex()
         if accounts.isEmpty {
@@ -165,6 +166,30 @@ final class AccountManager {
     private func saveIndex() {
         guard let data = try? JSONEncoder().encode(accounts) else { return }
         try? data.write(to: indexURL, options: .atomic)
+    }
+
+    private static func migrateRename(from oldRoot: URL, to newRoot: URL) {
+        let fm = FileManager.default
+        if let bundleID = Bundle.main.bundleIdentifier,
+           UserDefaults.standard.persistentDomain(forName: bundleID)?.isEmpty ?? true,
+           let legacy = UserDefaults.standard.persistentDomain(forName: "com.glhrmoura.watt"), !legacy.isEmpty {
+            UserDefaults.standard.setPersistentDomain(legacy, forName: bundleID)
+        }
+        guard fm.fileExists(atPath: oldRoot.path), !fm.fileExists(atPath: newRoot.path) else { return }
+        guard (try? fm.moveItem(at: oldRoot, to: newRoot)) != nil else { return }
+        let oldPrefix = oldRoot.path + "/"
+        let newPrefix = newRoot.path + "/"
+        let escapedOld = oldPrefix.replacingOccurrences(of: "/", with: "\\/")
+        let escapedNew = newPrefix.replacingOccurrences(of: "/", with: "\\/")
+        let accounts = newRoot.appendingPathComponent("accounts", isDirectory: true)
+        let dirs = (try? fm.contentsOfDirectory(at: accounts, includingPropertiesForKeys: nil)) ?? []
+        for cache in dirs.map({ $0.appendingPathComponent("wa-chats.json") }) + [newRoot.appendingPathComponent("wa-chats.json")] {
+            guard let text = try? String(contentsOf: cache, encoding: .utf8) else { continue }
+            let updated = text
+                .replacingOccurrences(of: escapedOld, with: escapedNew)
+                .replacingOccurrences(of: oldPrefix, with: newPrefix)
+            if updated != text { try? updated.write(to: cache, atomically: true, encoding: .utf8) }
+        }
     }
 
     private func migrateLegacy() -> Bool {

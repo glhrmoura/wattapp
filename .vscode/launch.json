@@ -4,21 +4,21 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:watt}",
-            "name": "Debug Watt",
-            "target": "Watt",
+            "cwd": "${workspaceFolder:wattapp}",
+            "name": "Debug wattapp",
+            "target": "wattapp",
             "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug Watt"
+            "preLaunchTask": "swift: Build Debug wattapp"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:watt}",
-            "name": "Release Watt",
-            "target": "Watt",
+            "cwd": "${workspaceFolder:wattapp}",
+            "name": "Release wattapp",
+            "target": "wattapp",
             "configuration": "release",
-            "preLaunchTask": "swift: Build Release Watt"
+            "preLaunchTask": "swift: Build Release wattapp"
         }
     ]
 }

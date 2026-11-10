@@ -1,4 +1,4 @@
-module watt/bridge
+module wattapp/bridge
 
 go 1.27.3
 

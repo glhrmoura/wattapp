@@ -57,7 +57,7 @@ final class WhatsAppBridge: @unchecked Sendable {
     private var process: Process?
     private var input: FileHandle?
     private var buffer = Data()
-    private let queue = DispatchQueue(label: "watt.bridge")
+    private let queue = DispatchQueue(label: "wattapp.bridge")
     private let onEvents: @Sendable ([BridgeEvent]) -> Void
     private let onExit: @Sendable (Int32) -> Void
 
@@ -68,15 +68,15 @@ final class WhatsAppBridge: @unchecked Sendable {
 
     static var executableURL: URL? {
         let candidates = [
-            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("watt-bridge"),
-            URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("build/watt-bridge")
+            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("wattapp-bridge"),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("build/wattapp-bridge")
         ]
         return candidates.compactMap { $0 }.first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
 
     func start(databaseURL: URL) throws {
         guard let url = Self.executableURL else {
-            throw NSError(domain: "Watt", code: 1, userInfo: [NSLocalizedDescriptionKey: "watt-bridge não encontrado"])
+            throw NSError(domain: "WattApp", code: 1, userInfo: [NSLocalizedDescriptionKey: "wattapp-bridge não encontrado"])
         }
         let process = Process()
         process.executableURL = url

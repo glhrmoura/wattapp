@@ -141,7 +141,7 @@ struct ContentView: View {
         }
         .background(WindowBackground())
         .onChange(of: accentTheme, initial: true) { _, value in AccentState.shared.apply(theme: value) }
-        .onReceive(NotificationCenter.default.publisher(for: .wattNewChat)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .wattappNewChat)) { _ in
             if !needsLogin { store.startComposing() }
         }
     }
@@ -166,7 +166,7 @@ struct EmptyDetailView: View {
                 .resizable()
                 .frame(width: 112, height: 112)
             VStack(spacing: 6) {
-                Text("Watt para Mac")
+                Text("WattApp para Mac")
                     .font(.title.weight(.semibold))
                 Text("Selecione uma conversa para começar.")
                     .foregroundStyle(.secondary)
@@ -175,7 +175,7 @@ struct EmptyDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)
-        .navigationTitle("Watt")
+        .navigationTitle("WattApp")
     }
 }
 

@@ -43,7 +43,7 @@ struct SideRail: View {
         .confirmationDialog("Sair desta conta?", isPresented: $confirmLogout) {
             Button("Sair", role: .destructive) { store.logout() }
         } message: {
-            Text("O Watt será removido dos aparelhos conectados desta conta e o histórico local dela será apagado.")
+            Text("O WattApp será removido dos aparelhos conectados desta conta e o histórico local dela será apagado.")
         }
         .onChange(of: store.selfJID) { _, jid in
             if let jid { store.requestContactAvatar(jid) }

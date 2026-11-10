@@ -405,7 +405,7 @@ struct VisualSettings: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Visual")
                     .font(.system(size: 17, weight: .semibold))
-                Text("Cores das bordas e dos destaques do Watt para \(title).")
+                Text("Cores das bordas e dos destaques do WattApp para \(title).")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }

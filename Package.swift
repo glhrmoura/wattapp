@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "Watt",
+    name: "wattapp",
     platforms: [.macOS(.v15)],
     targets: [
-        .executableTarget(name: "Watt", path: "Sources/Watt")
+        .executableTarget(name: "wattapp", path: "Sources/wattapp")
     ]
 )

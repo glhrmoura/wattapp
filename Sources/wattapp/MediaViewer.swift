@@ -236,7 +236,7 @@ struct MediaViewer: View {
     private func save(_ message: Message) {
         guard let url = fileURL(message) else { return }
         let panel = NSSavePanel()
-        let name = "Watt \(message.date.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)))"
+        let name = "WattApp \(message.date.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)))"
             .replacingOccurrences(of: ":", with: "-")
         panel.nameFieldStringValue = name + "." + url.pathExtension
         panel.allowedContentTypes = [UTType(filenameExtension: url.pathExtension) ?? .image]
