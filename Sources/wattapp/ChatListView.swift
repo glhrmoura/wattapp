@@ -431,8 +431,10 @@ struct ChatRow: View {
                         Text(Formatters.listTimestamp(last.date))
                             .font(.system(size: 13))
                             .foregroundStyle(chat.unreadCount > 0 ? Palette.accent : .secondary)
+                            .lineLimit(1)
+                            .fixedSize()
                     }
-                    if hovering && !selecting {
+                    if !selecting {
                         Menu {
                             ChatMenu(chat: chat)
                         } label: {
@@ -450,6 +452,8 @@ struct ChatRow: View {
                         .fixedSize()
                         .frame(height: 14)
                         .offset(y: -3)
+                        .opacity(hovering ? 1 : 0)
+                        .allowsHitTesting(hovering)
                     }
                 }
                 HStack(spacing: 4) {

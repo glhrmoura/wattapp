@@ -884,7 +884,23 @@ final class ChatStore {
         chats = decoded.filter { chat in
             !Self.isHidden(chat.id) && !(chat.messages.isEmpty && chat.title == chat.id && !chat.isLocked)
         }
+        relocateStalePaths()
         rebuildIndex()
+    }
+
+    private func relocateStalePaths() {
+        let fm = FileManager.default
+        func relocate(_ path: String?, into folder: String) -> String? {
+            guard let path, !path.isEmpty, !fm.fileExists(atPath: path) else { return path }
+            let candidate = baseURL.appendingPathComponent(folder).appendingPathComponent((path as NSString).lastPathComponent).path
+            return fm.fileExists(atPath: candidate) ? candidate : path
+        }
+        for i in chats.indices {
+            chats[i].avatarPath = relocate(chats[i].avatarPath, into: "avatars")
+            for m in chats[i].messages.indices {
+                chats[i].messages[m].mediaPath = relocate(chats[i].messages[m].mediaPath, into: "media")
+            }
+        }
     }
 
     private func scheduleSave() {
