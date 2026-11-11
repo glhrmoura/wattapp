@@ -35,8 +35,16 @@ struct Message: Identifiable, Codable, Hashable {
     var waveform: [UInt8]?
     var linkPreview: LinkPreview?
     var quoted: QuotedMessage?
+    var edited: Bool?
 
     var canReply: Bool { !id.hasPrefix("tmp-") && !(revoked ?? false) }
+
+    static let editWindow: TimeInterval = 15 * 60
+
+    var canEdit: Bool {
+        isOutgoing && mediaKind == nil && !id.hasPrefix("tmp-") && !(revoked ?? false)
+            && status != .failed && Date.now.timeIntervalSince(date) < Self.editWindow
+    }
 
     var quoteText: String {
         if mediaKind == "sticker" { return "Figurinha" }

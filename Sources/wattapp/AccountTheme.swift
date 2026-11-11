@@ -154,42 +154,6 @@ struct ThemeSwatch: View {
     }
 }
 
-struct ThemeCard: View {
-    let name: String
-    let hex: String?
-    var custom = false
-    let selected: Bool
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                ThemeSwatch(hex: hex, custom: custom)
-                Text(name)
-                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 44)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.primary.opacity(selected ? 0.08 : hovering ? 0.06 : 0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(selected ? Palette.accent : Color.primary.opacity(0.1), lineWidth: selected ? 1.5 : 1)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
-    }
-}
-
 struct InlineColorPicker: View {
     let hex: String
     let onChange: (String) -> Void
@@ -281,7 +245,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .visual: "paintpalette"
+        case .visual: "paintpalette.fill"
         }
     }
 }
@@ -291,60 +255,137 @@ struct SettingsSheet: View {
     @State private var section: SettingsSection = .visual
 
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 0) {
+            VStack(spacing: 14) {
                 Text("Configurações")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
-                ForEach(SettingsSection.allCases) { item in
-                    SettingsSidebarRow(section: item, selected: section == item) { section = item }
-                }
-                Spacer()
+                SettingsTabs(selection: $section)
             }
-            .padding(12)
-            .frame(width: 200)
-            .frame(maxHeight: .infinity)
-            .background(Color.primary.opacity(0.03))
+            .padding(.top, 18)
+            .padding(.bottom, 16)
             Divider()
             switch section {
             case .visual:
                 VisualSettings(account: account)
             }
         }
-        .frame(height: 560)
+        .frame(width: 560, height: 660)
     }
 }
 
-private struct SettingsSidebarRow: View {
-    let section: SettingsSection
+private struct SettingsTabs: View {
+    @Binding var selection: SettingsSection
+    @Namespace private var namespace
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(SettingsSection.allCases) { item in
+                let selected = selection == item
+                Button {
+                    withAnimation(.easeOut(duration: 0.18)) { selection = item }
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 13, weight: .medium))
+                        Text(item.title)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                    .padding(.horizontal, 16)
+                    .frame(height: 30)
+                    .background {
+                        if selected {
+                            Capsule()
+                                .fill(Color.primary.opacity(0.12))
+                                .matchedGeometryEffect(id: "tab", in: namespace)
+                        }
+                    }
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+            }
+        }
+        .padding(3)
+        .background(Capsule().fill(Color.primary.opacity(0.05)))
+        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
+    }
+}
+
+private struct SettingsGroup<Content: View>: View {
+    let title: String
+    var subtitle: String?
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.leading, 4)
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                )
+        }
+    }
+}
+
+private struct PillButtonStyle: ButtonStyle {
+    var prominent = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(prominent ? Color.black : Color.primary)
+            .padding(.horizontal, 18)
+            .frame(height: 30)
+            .background(Capsule().fill(prominent ? Palette.accent : Color.primary.opacity(0.1)))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .contentShape(Capsule())
+    }
+}
+
+private struct SwatchButton: View {
+    let name: String
+    let hex: String?
+    var custom = false
     let selected: Bool
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: section.icon)
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 18)
-                Text(section.title)
-                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
-                Spacer(minLength: 0)
+            VStack(spacing: 7) {
+                ThemeSwatch(hex: hex, custom: custom, size: 38)
+                    .padding(3)
+                    .overlay(
+                        Circle().strokeBorder(selected ? Palette.accent : Color.clear, lineWidth: 2)
+                    )
+                    .scaleEffect(hovering && !selected ? 1.06 : 1)
+                Text(name)
+                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2, reservesSpace: true)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.primary.opacity(selected ? 0.1 : hovering ? 0.05 : 0))
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
         .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .help(name)
     }
 }
 
@@ -353,16 +394,19 @@ struct VisualSettings: View {
     @Environment(\.dismiss) private var dismiss
     let account: AccountInfo
     @State private var showCustom = false
+    @State private var original: (theme: String?, follows: Bool)?
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4, alignment: .top), count: 6)
 
     private var customStart: NSColor {
         current.flatMap(AccountTheme.color) ?? NSColor(srgbRed: 0x1D / 255, green: 0x3F / 255, blue: 0x5E / 255, alpha: 1)
     }
 
-    private var current: String? {
-        accounts.accounts.first { $0.id == account.id }?.theme
+    private var info: AccountInfo? {
+        accounts.accounts.first { $0.id == account.id }
     }
+
+    private var current: String? { info?.theme }
 
     private var isCustom: Bool {
         guard let current else { return false }
@@ -376,110 +420,116 @@ struct VisualSettings: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                content
-                    .padding(24)
-                    .thinScrollers()
+                VStack(alignment: .leading, spacing: 26) {
+                    SettingsGroup(title: "Pré-visualização", subtitle: "Cores das bordas e dos destaques do WattApp para \(title).") {
+                        preview
+                    }
+                    SettingsGroup(title: "Destaques") {
+                        accentRow
+                    }
+                    SettingsGroup(title: "Cor única") {
+                        swatchGrid {
+                            swatch("Padrão", hex: nil)
+                            ForEach(AccountTheme.presets) { swatch($0.name, hex: $0.hex) }
+                            customSwatch
+                        }
+                    }
+                    SettingsGroup(title: "Miles Davis") {
+                        swatchGrid {
+                            ForEach(AccountTheme.milesPresets) { swatch($0.name, hex: $0.hex) }
+                        }
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .thinScrollers()
             }
             Divider()
-            HStack {
+            HStack(spacing: 10) {
                 Spacer()
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Concluído")
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 6)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .keyboardShortcut(.defaultAction)
+                Button("Cancelar", action: cancel)
+                    .buttonStyle(PillButtonStyle())
+                    .pointerStyle(.link)
+                    .keyboardShortcut(.cancelAction)
+                Button("Concluído") { dismiss() }
+                    .buttonStyle(PillButtonStyle(prominent: true))
+                    .pointerStyle(.link)
+                    .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
         }
-        .frame(width: 600)
+        .onAppear {
+            guard original == nil else { return }
+            original = (info?.theme, info?.plainAccent != true)
+        }
     }
 
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Visual")
-                    .font(.system(size: 17, weight: .semibold))
-                Text("Cores das bordas e dos destaques do WattApp para \(title).")
-                    .font(.system(size: 12))
+    private func cancel() {
+        if let original {
+            accounts.setTheme(account.id, hex: original.theme)
+            accounts.setAccentFollowsTheme(account.id, original.follows)
+        }
+        dismiss()
+    }
+
+    private var accentRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "paintbrush.pointed.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.black)
+                .frame(width: 30, height: 30)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.accent.gradient))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Destaques na cor do tema")
+                    .font(.system(size: 13, weight: .medium))
+                Text("Botões, filtros e links acompanham a cor escolhida.")
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
-            preview
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Destaques na cor do tema")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("Botões, filtros e links acompanham a cor escolhida.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-                Toggle("", isOn: Binding(
-                    get: { accounts.accounts.first { $0.id == account.id }?.plainAccent != true },
-                    set: { accounts.setAccentFollowsTheme(account.id, $0) }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .disabled(current == nil)
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
-            )
-            .opacity(current == nil ? 0.5 : 1)
-            section("Cor única") {
-                card("Padrão", hex: nil)
-                ForEach(AccountTheme.presets) { preset in
-                    card(preset.name, hex: preset.hex)
-                }
-                ThemeCard(name: "Personalizada", hex: isCustom ? current : nil, custom: true, selected: isCustom) {
-                    if !isCustom { accounts.setTheme(account.id, hex: AccountTheme.hex(customStart) ?? "1D3F5E") }
-                    showCustom = true
-                }
-                .popover(isPresented: $showCustom, arrowEdge: .trailing) {
-                    if let current {
-                        InlineColorPicker(hex: current) { hex in
-                            accounts.setTheme(account.id, hex: hex)
-                        }
-                        .padding(16)
-                        .frame(width: 260)
-                    }
-                }
-            }
-            section("Miles Davis") {
-                ForEach(AccountTheme.milesPresets) { preset in
-                    card(preset.name, hex: preset.hex)
-                }
-            }
+            Spacer(minLength: 0)
+            Toggle("", isOn: Binding(
+                get: { info?.plainAccent != true },
+                set: { accounts.setAccentFollowsTheme(account.id, $0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(Palette.accent)
+            .disabled(current == nil)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .opacity(current == nil ? 0.5 : 1)
     }
 
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-            LazyVGrid(columns: columns, spacing: 10) {
-                content()
-            }
+    private func swatchGrid<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        LazyVGrid(columns: columns, spacing: 14) {
+            content()
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 16)
     }
 
-    private func card(_ name: String, hex: String?) -> some View {
-        ThemeCard(name: name, hex: hex, selected: current == hex) {
+    private func swatch(_ name: String, hex: String?) -> some View {
+        SwatchButton(name: name, hex: hex, selected: current == hex) {
             showCustom = false
             accounts.setTheme(account.id, hex: hex)
+        }
+    }
+
+    private var customSwatch: some View {
+        SwatchButton(name: "Personalizada", hex: isCustom ? current : nil, custom: true, selected: isCustom) {
+            if !isCustom { accounts.setTheme(account.id, hex: AccountTheme.hex(customStart) ?? "1D3F5E") }
+            showCustom = true
+        }
+        .popover(isPresented: $showCustom, arrowEdge: .bottom) {
+            if let current {
+                InlineColorPicker(hex: current) { hex in
+                    accounts.setTheme(account.id, hex: hex)
+                }
+                .padding(16)
+                .frame(width: 260)
+            }
         }
     }
 
@@ -512,7 +562,14 @@ struct VisualSettings: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(panelTint)
                 Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1)
-                Palette.background
+                ZStack(alignment: .bottomTrailing) {
+                    Palette.background
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Capsule().fill(Color.white.opacity(0.12)).frame(width: 90, height: 16)
+                        Capsule().fill(Palette.accent.opacity(0.85)).frame(width: 64, height: 16)
+                    }
+                    .padding(14)
+                }
             }
             .overlay(alignment: .top) {
                 Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
@@ -524,7 +581,7 @@ struct VisualSettings: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
         )
     }
 

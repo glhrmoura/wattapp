@@ -11,6 +11,7 @@ struct MessageActions {
     var select: () -> Void
     var delete: () -> Void
     var reply: (() -> Void)?
+    var edit: (() -> Void)?
 }
 
 extension EnvironmentValues {
@@ -157,6 +158,9 @@ struct MessageBubble: View {
                 }
                 Button("Copiar", action: actions.copy)
                     .disabled(message.mediaKind == "sticker")
+                if let edit = actions.edit {
+                    Button("Editar", action: edit)
+                }
                 if let favorite = actions.favorite {
                     Divider()
                     Button(actions.isFavorite ? "Remover das favoritas" : "Adicionar às favoritas", action: favorite)
@@ -381,7 +385,7 @@ struct MessageBubble: View {
     }
 
     private func textBody(_ text: String, fill: Bool = false) -> some View {
-        let padding = String(repeating: "\u{2007}", count: message.isOutgoing ? 8 : 6)
+        let padding = String(repeating: "\u{2007}", count: (message.isOutgoing ? 8 : 6) + (isEdited ? 6 : 0))
         let short = expanded ? nil : RichText.truncated(text)
         let shown = short ?? text
         return ZStack(alignment: .bottomTrailing) {
@@ -404,8 +408,15 @@ struct MessageBubble: View {
         .padding(.horizontal, image == nil ? 0 : 6)
     }
 
+    private var isEdited: Bool { (message.edited ?? false) && !(message.revoked ?? false) }
+
     private var timestamp: some View {
         HStack(spacing: 3) {
+            if isEdited {
+                Text("Editada")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
             Text(message.date.formatted(date: .omitted, time: .shortened))
                 .font(.caption2)
                 .foregroundStyle(.secondary)

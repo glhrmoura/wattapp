@@ -17,6 +17,8 @@ final class ChatStore {
     var isComposing = false
     var showLocked = false
     var replyTo: [Chat.ID: Message] = [:]
+    var editing: [Chat.ID: Message] = [:]
+    @ObservationIgnored private var pendingEdits: [Message.ID: (text: String, edited: Bool?)] = [:]
     var isSelecting = false
     var selection = Set<Chat.ID>()
     var selectionAnchor: Chat.ID?
@@ -199,6 +201,30 @@ final class ChatStore {
 
     func cancelReply(in chatID: Chat.ID) {
         replyTo[chatID] = nil
+    }
+
+    func startEditing(_ message: Message, in chatID: Chat.ID) {
+        guard message.canEdit else { return }
+        replyTo[chatID] = nil
+        editing[chatID] = message
+    }
+
+    func cancelEditing(in chatID: Chat.ID) {
+        editing[chatID] = nil
+    }
+
+    func finishEditing(_ text: String, in chatID: Chat.ID) {
+        guard let original = editing.removeValue(forKey: chatID) else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != original.text,
+              let i = indexByID[chatID],
+              let m = chats[i].messages.firstIndex(where: { $0.id == original.id }) else { return }
+        pendingEdits[original.id] = (chats[i].messages[m].text, chats[i].messages[m].edited)
+        chats[i].messages[m].text = trimmed
+        chats[i].messages[m].edited = true
+        chats[i].messages[m].linkPreview = nil
+        bridge?.send(["cmd": "edit", "chat": chatID, "id": original.id, "text": trimmed])
+        scheduleSave()
     }
 
     private func takeQuote(for chatID: Chat.ID) -> QuotedMessage? {
@@ -593,6 +619,26 @@ final class ChatStore {
                 }
             case "revoked":
                 updateMessage(chat: event.chat, id: event.id) { Self.markRevoked(&$0, fromMe: event.fromMe ?? false) }
+            case "edited":
+                guard let text = event.text else { continue }
+                if let id = event.id { pendingEdits[id] = nil }
+                updateMessage(chat: event.chat, id: event.id) { message in
+                    guard !(message.revoked ?? false) else { return }
+                    if message.mediaKind != nil {
+                        if let caption = event.caption { message.caption = caption.isEmpty ? nil : caption }
+                    } else if message.text != text {
+                        message.linkPreview = nil
+                    }
+                    message.text = text
+                    message.edited = true
+                }
+            case "edit_failed":
+                lastError = event.message
+                guard let id = event.id, let previous = pendingEdits.removeValue(forKey: id) else { continue }
+                updateMessage(chat: event.chat, id: id) {
+                    $0.text = previous.text
+                    $0.edited = previous.edited
+                }
             case "members":
                 guard let jid = event.jid, let i = indexByID[jid], let names = event.names else { continue }
                 chats[i].members = names

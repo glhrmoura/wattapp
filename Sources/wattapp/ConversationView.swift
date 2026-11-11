@@ -8,6 +8,7 @@ struct ConversationView: View {
     let chatID: Chat.ID
     @State private var text = ""
     @FocusState private var composerFocused: Bool
+    @FocusState private var editFocused: Bool
     @State private var showAttachMenu = false
     @State private var selecting = false
     @State private var growDown = false
@@ -21,6 +22,7 @@ struct ConversationView: View {
     @State private var undoTask: Task<Void, Never>?
     @State private var flashID: Message.ID?
     @State private var pasteMonitor = PasteMonitor()
+    @State private var savedDraft = ""
 
     private var chat: Chat? { store.chat(chatID) }
 
@@ -45,6 +47,12 @@ struct ConversationView: View {
                     composer
                 }
             }
+            .overlay {
+                if let editingMessage = store.editing[chatID] {
+                    editOverlay(editingMessage, in: chat)
+                }
+            }
+            .animation(.easeOut(duration: 0.2), value: store.editing[chatID]?.id)
             .navigationTitle(chat.displayTitle)
             .toolbar(removing: .title)
             .toolbar {
@@ -120,7 +128,9 @@ struct ConversationView: View {
                 startPasteMonitor()
             }
             .onChange(of: composerFocused) { _, focused in pasteMonitor.enabled = focused }
-            .onChange(of: text) { _, newValue in store.updateDraft(newValue, for: chatID) }
+            .onChange(of: text) { _, newValue in
+                if store.editing[chatID] == nil { store.updateDraft(newValue, for: chatID) }
+            }
             .dropDestination(for: URL.self) { urls, _ in
                 let files = urls.filter(\.isFileURL)
                 guard !files.isEmpty else { return false }
@@ -132,6 +142,7 @@ struct ConversationView: View {
                 ForwardSheet(messages: forwarding)
             }
             .onDisappear {
+                store.cancelEditing(in: chatID)
                 pasteMonitor.stop()
                 store.persistNow()
             }
@@ -379,6 +390,13 @@ struct ConversationView: View {
     }
 
     private func send() {
+        if store.editing[chatID] != nil {
+            store.finishEditing(text, in: chatID)
+            text = savedDraft
+            savedDraft = ""
+            composerFocused = true
+            return
+        }
         store.send(text, to: chatID)
         text = ""
     }
@@ -420,6 +438,9 @@ struct ConversationView: View {
                     Button("Responder", systemImage: "arrowshape.turn.up.left", action: reply)
                 }
                 Button("Copiar", systemImage: "doc.on.doc", action: actions.copy)
+                if let edit = actions.edit {
+                    Button("Editar", systemImage: "pencil", action: edit)
+                }
                 if let forward = actions.forward {
                     Button("Encaminhar", systemImage: "arrowshape.turn.up.right", action: forward)
                 }
@@ -451,8 +472,100 @@ struct ConversationView: View {
             isFavorite: message.mediaPath.map(StickerFavorites.contains) ?? false,
             select: { startSelecting(message.id) },
             delete: { startSelecting(message.id) },
-            reply: message.canReply ? { store.reply(to: message, in: chatID) } : nil
+            reply: message.canReply ? { store.reply(to: message, in: chatID) } : nil,
+            edit: message.canEdit ? { startEditing(message) } : nil
         )
+    }
+
+    private func startEditing(_ message: Message) {
+        if store.editing[chatID] == nil { savedDraft = text }
+        store.startEditing(message, in: chatID)
+        text = message.text
+    }
+
+    private func editOverlay(_ message: Message, in chat: Chat) -> some View {
+        VStack(spacing: 13) {
+            Spacer(minLength: 0)
+            MessageBubble(
+                message: message,
+                showSender: false,
+                isFirstInGroup: false,
+                isLastInGroup: true,
+                quote: message.quoted.map { quoteDisplay(for: $0, in: chat) }
+            )
+            .padding(.horizontal, 16)
+            .allowsHitTesting(false)
+            editComposer
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            ZStack {
+                BlurBackdrop()
+                Color.black.opacity(scheme == .dark ? 0.2 : 0.06)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: cancelEditing)
+        )
+        .transition(.opacity)
+    }
+
+    private var editComposer: some View {
+        let dark = scheme == .dark
+        return HStack(alignment: .bottom, spacing: 8) {
+            Button(action: cancelEditing) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(dark ? Color.white.opacity(0.1) : Color.white))
+                    .overlay(Circle().stroke(Color.primary.opacity(dark ? 0.1 : 0.12), lineWidth: 0.5))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .pointerStyle(.link)
+            .help("Cancelar edição")
+            TextField("", text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14))
+                .lineLimit(1...6)
+                .focused($editFocused)
+                .padding(.leading, 16)
+                .padding(.trailing, 14)
+                .padding(.vertical, 7)
+                .frame(minHeight: 32)
+                .background(Capsule().fill(dark ? Color.white.opacity(0.16) : Color.white))
+                .overlay(Capsule().stroke(Color.primary.opacity(dark ? 0.12 : 0.15), lineWidth: 0.5))
+                .padding(.vertical, 2)
+                .onAppear { editFocused = true }
+                .onKeyPress(.escape) {
+                    cancelEditing()
+                    return .handled
+                }
+                .onKeyPress(.return, phases: .down) { press in
+                    if press.modifiers.contains(.shift) { return .ignored }
+                    send()
+                    return .handled
+                }
+            Button(action: send) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Palette.accent))
+            }
+            .buttonStyle(.plain)
+            .pointerStyle(.link)
+            .help("Salvar edição")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    private func cancelEditing() {
+        store.cancelEditing(in: chatID)
+        text = savedDraft
+        savedDraft = ""
+        composerFocused = true
     }
 
     private func startSelecting(_ id: Message.ID?) {
@@ -563,6 +676,18 @@ struct ConversationView: View {
     private func present(_ items: [Attachment]) {
         store.presentAttachments(items, for: chatID)
     }
+}
+
+private struct BlurBackdrop: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .fullScreenUI
+        view.blendingMode = .withinWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
 struct Wallpaper: View {

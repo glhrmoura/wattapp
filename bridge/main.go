@@ -538,6 +538,18 @@ func messageText(m *waE2E.Message) string {
 	return ""
 }
 
+func captionOf(m *waE2E.Message) string {
+	switch {
+	case m.GetImageMessage() != nil:
+		return m.GetImageMessage().GetCaption()
+	case m.GetVideoMessage() != nil:
+		return m.GetVideoMessage().GetCaption()
+	case m.GetDocumentMessage() != nil:
+		return m.GetDocumentMessage().GetCaption()
+	}
+	return ""
+}
+
 func historyStatus(status waWeb.WebMessageInfo_Status) string {
 	switch status {
 	case waWeb.WebMessageInfo_READ, waWeb.WebMessageInfo_PLAYED:
@@ -568,6 +580,13 @@ func (b *bridge) emitMessage(evt *events.Message, history bool, status ...string
 	}
 	if p := evt.Message.GetProtocolMessage(); p != nil && p.GetType() == waE2E.ProtocolMessage_REVOKE {
 		b.emit(outEvent{"type": "revoked", "chat": chat.String(), "id": p.GetKey().GetID(), "fromMe": evt.Info.IsFromMe})
+		return
+	}
+	if p := evt.Message.GetProtocolMessage(); p != nil && p.GetType() == waE2E.ProtocolMessage_MESSAGE_EDIT {
+		edited := p.GetEditedMessage()
+		if text := messageText(edited); text != "" {
+			b.emit(outEvent{"type": "edited", "chat": chat.String(), "id": p.GetKey().GetID(), "text": text, "caption": captionOf(edited)})
+		}
 		return
 	}
 	text := messageText(evt.Message)
@@ -1038,6 +1057,17 @@ func (b *bridge) react(cmd command) {
 	}
 }
 
+func (b *bridge) edit(cmd command) {
+	chat, err := types.ParseJID(cmd.Chat)
+	if err != nil || cmd.ID == "" || cmd.Text == "" {
+		return
+	}
+	content := &waE2E.Message{Conversation: proto.String(cmd.Text)}
+	if _, err := b.client.SendMessage(b.ctx, chat, b.client.BuildEdit(chat, cmd.ID, content)); err != nil {
+		b.emit(outEvent{"type": "edit_failed", "chat": cmd.Chat, "id": cmd.ID, "message": err.Error()})
+	}
+}
+
 func (b *bridge) revoke(cmd command) {
 	chat, err := types.ParseJID(cmd.Chat)
 	if err != nil {
@@ -1165,6 +1195,8 @@ func (b *bridge) readCommands() {
 			go b.react(cmd)
 		case "revoke":
 			go b.revoke(cmd)
+		case "edit":
+			go b.edit(cmd)
 		case "members":
 			go b.emitMembers(cmd.Chat)
 		case "send_media":
