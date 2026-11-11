@@ -661,8 +661,12 @@ final class ChatStore {
                 lastError = event.message
             case "receipt":
                 guard let chat = event.chat, let i = indexByID[chat], let ids = event.ids else { continue }
-                let status: DeliveryStatus = event.status == "read" ? .read : .delivered
                 let set = Set(ids)
+                if event.own ?? false {
+                    applyOwnRead(at: i, ids: set, timestamp: event.timestamp)
+                    continue
+                }
+                let status: DeliveryStatus = event.status == "read" ? .read : .delivered
                 for m in chats[i].messages.indices where set.contains(chats[i].messages[m].id) && chats[i].messages[m].isOutgoing {
                     chats[i].messages[m].status = max(chats[i].messages[m].status, status)
                 }
@@ -742,6 +746,17 @@ final class ChatStore {
             }
         }
         return outOfOrder ? i : nil
+    }
+
+    private func applyOwnRead(at i: Int, ids: Set<String>, timestamp: Double?) {
+        guard chats[i].unreadCount > 0 else { return }
+        let messages = chats[i].messages
+        if let last = messages.lastIndex(where: { ids.contains($0.id) }) {
+            let remaining = messages[(last + 1)...].filter { !$0.isOutgoing }.count
+            chats[i].unreadCount = min(chats[i].unreadCount, remaining)
+        } else if let timestamp, let newest = messages.last?.date, Date(timeIntervalSince1970: timestamp) >= newest {
+            chats[i].unreadCount = 0
+        }
     }
 
     private func sendReadReceipts(for chat: Chat) {

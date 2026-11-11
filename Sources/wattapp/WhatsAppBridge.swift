@@ -33,6 +33,7 @@ struct BridgeEvent: Decodable {
     var pinned: Bool?
     var muted: Bool?
     var unread: Bool?
+    var own: Bool?
     var locked: Bool?
     var contacts: [BridgeContact]?
     var names: [String]?

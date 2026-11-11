@@ -779,7 +779,12 @@ func (b *bridge) handle(raw any) {
 			status = "read"
 		}
 		if status != "" {
-			b.emit(outEvent{"type": "receipt", "chat": b.canonical(evt.Chat).String(), "ids": evt.MessageIDs, "status": status})
+			out := outEvent{"type": "receipt", "chat": b.canonical(evt.Chat).String(), "ids": evt.MessageIDs, "status": status}
+			if status == "read" && (evt.IsFromMe || evt.Type == types.ReceiptTypeReadSelf) {
+				out["own"] = true
+				out["timestamp"] = evt.Timestamp.Unix()
+			}
+			b.emit(out)
 		}
 	case *events.Connected:
 		b.emitConnected()
