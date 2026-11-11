@@ -131,8 +131,12 @@ struct ConversationView: View {
             }
             .onAppear {
                 text = chat.draft
-                composerFocused = true
                 startPasteMonitor()
+            }
+            .task {
+                await Task.yield()
+                try? await Task.sleep(for: .milliseconds(60))
+                composerFocused = true
             }
             .onChange(of: composerFocused) { _, focused in pasteMonitor.enabled = focused }
             .onChange(of: text) { _, newValue in
