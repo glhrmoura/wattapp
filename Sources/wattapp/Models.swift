@@ -125,6 +125,22 @@ struct Chat: Identifiable, Codable, Hashable {
     }
 }
 
+struct ChatProfile: Hashable {
+    struct Participant: Identifiable, Hashable {
+        let id: String
+        let name: String
+        let isAdmin: Bool
+        let isSelf: Bool
+    }
+
+    var about: String?
+    var business: String?
+    var description: String?
+    var created: Date?
+    var owner: String?
+    var participants: [Participant] = []
+}
+
 struct Contact: Identifiable, Hashable {
     let id: String
     let name: String

@@ -482,6 +482,67 @@ func (b *bridge) emitMembers(raw string) {
 	b.emit(outEvent{"type": "members", "jid": b.canonical(jid).String(), "names": names})
 }
 
+func (b *bridge) emitProfile(raw string) {
+	jid, err := types.ParseJID(raw)
+	if err != nil || ignored(jid) {
+		return
+	}
+	event := outEvent{"type": "profile", "jid": b.canonical(jid).String()}
+	if jid.Server == types.GroupServer {
+		info, err := b.client.GetGroupInfo(b.ctx, jid)
+		if err != nil {
+			return
+		}
+		event["description"] = info.Topic
+		if !info.GroupCreated.IsZero() {
+			event["created"] = info.GroupCreated.Unix()
+		}
+		owner := info.OwnerPN
+		if owner.IsEmpty() {
+			owner = b.canonical(info.OwnerJID)
+		}
+		if !owner.IsEmpty() {
+			if owner.User == b.selfUser {
+				event["owner"] = "Você"
+			} else {
+				event["owner"] = b.memberName(owner.ToNonAD(), "")
+			}
+		}
+		participants := []map[string]any{}
+		for _, p := range info.Participants {
+			member := b.canonical(p.JID)
+			if !p.PhoneNumber.IsEmpty() {
+				member = p.PhoneNumber.ToNonAD()
+			}
+			self := member.User == b.selfUser
+			name := "Você"
+			if !self {
+				name = b.memberName(member, p.DisplayName)
+			}
+			participants = append(participants, map[string]any{
+				"jid":   member.String(),
+				"name":  name,
+				"admin": p.IsAdmin || p.IsSuperAdmin,
+				"self":  self,
+			})
+		}
+		event["participants"] = participants
+		b.emit(event)
+		return
+	}
+	target := b.canonical(jid)
+	if users, err := b.client.GetUserInfo(b.ctx, []types.JID{target}); err == nil {
+		for _, user := range users {
+			event["about"] = user.Status
+			if user.VerifiedName != nil && user.VerifiedName.Details != nil {
+				event["business"] = user.VerifiedName.Details.GetVerifiedName()
+			}
+			break
+		}
+	}
+	b.emit(event)
+}
+
 func (b *bridge) refreshNames() {
 	b.names.Range(func(key, _ any) bool {
 		if jid, err := types.ParseJID(key.(string)); err == nil && jid.Server != types.GroupServer {
@@ -1199,6 +1260,8 @@ func (b *bridge) readCommands() {
 			go b.edit(cmd)
 		case "members":
 			go b.emitMembers(cmd.Chat)
+		case "profile":
+			go b.emitProfile(cmd.Chat)
 		case "send_media":
 			go b.sendMedia(cmd)
 		case "mark_read":

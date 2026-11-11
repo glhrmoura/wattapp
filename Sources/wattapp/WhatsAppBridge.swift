@@ -5,6 +5,13 @@ struct BridgeContact: Decodable {
     let name: String
 }
 
+struct BridgeParticipant: Decodable {
+    let jid: String
+    let name: String
+    var admin: Bool?
+    var `self`: Bool?
+}
+
 struct BridgeEvent: Decodable {
     let type: String
     var code: String?
@@ -52,6 +59,12 @@ struct BridgeEvent: Decodable {
     var quotedFromMe: Bool?
     var quotedSender: String?
     var quotedSenderName: String?
+    var about: String?
+    var business: String?
+    var description: String?
+    var created: Double?
+    var owner: String?
+    var participants: [BridgeParticipant]?
 }
 
 final class WhatsAppBridge: @unchecked Sendable {

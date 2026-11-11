@@ -23,6 +23,7 @@ struct ConversationView: View {
     @State private var flashID: Message.ID?
     @State private var pasteMonitor = PasteMonitor()
     @State private var savedDraft = ""
+    @State private var showProfile = false
 
     private var chat: Chat? { store.chat(chatID) }
 
@@ -57,7 +58,13 @@ struct ConversationView: View {
             .toolbar(removing: .title)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
-                    ConversationHeader(chat: chat)
+                    Button { showProfile = true } label: {
+                        ConversationHeader(chat: chat)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .help(chat.isGroup ? "Dados do grupo" : "Dados do contato")
                 }
                 .hiddenSharedBackground()
                 if #available(macOS 26.0, *) {
@@ -140,6 +147,10 @@ struct ConversationView: View {
             .onExitCommand { if selecting { stopSelecting() } }
             .sheet(isPresented: $showForward) {
                 ForwardSheet(messages: forwarding)
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileSheet(chatID: chatID)
+                    .environment(store)
             }
             .onDisappear {
                 store.cancelEditing(in: chatID)
@@ -849,16 +860,9 @@ struct ForwardSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).frame(width: 28, height: 28)
-                }
-                .buttonStyle(.borderless)
-                .keyboardShortcut(.cancelAction)
-                Text("Encaminhar mensagem").font(.headline)
-                Spacer()
-            }
-            .padding(12)
+            SheetHeader(title: "Encaminhar mensagem") { dismiss() }
+                .padding(.bottom, 12)
+                .onExitCommand { dismiss() }
             TextField("Pesquisar", text: $query)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)

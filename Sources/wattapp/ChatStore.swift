@@ -56,6 +56,7 @@ final class ChatStore {
     var selfJID: String?
     var selfName = ""
     var contactAvatars: [String: String] = [:]
+    var profiles: [String: ChatProfile] = [:]
     @ObservationIgnored private var requestedAvatars = Set<String>()
 
     @ObservationIgnored private var bridge: WhatsAppBridge?
@@ -369,6 +370,10 @@ final class ChatStore {
         if let selfJID { requestContactAvatar(selfJID) }
     }
 
+    func requestProfile(_ id: Chat.ID) {
+        bridge?.send(["cmd": "profile", "chat": id])
+    }
+
     func requestContactAvatar(_ jid: String) {
         guard isConnected, requestedAvatars.insert(jid).inserted else { return }
         bridge?.send(["cmd": "avatar", "chat": jid])
@@ -642,6 +647,25 @@ final class ChatStore {
             case "members":
                 guard let jid = event.jid, let i = indexByID[jid], let names = event.names else { continue }
                 chats[i].members = names
+            case "profile":
+                guard let jid = event.jid else { continue }
+                let participants = (event.participants ?? []).map {
+                    ChatProfile.Participant(id: $0.jid, name: $0.name, isAdmin: $0.admin ?? false, isSelf: $0.`self` ?? false)
+                }
+                profiles[jid] = ChatProfile(
+                    about: event.about.flatMap { $0.isEmpty ? nil : $0 },
+                    business: event.business.flatMap { $0.isEmpty ? nil : $0 },
+                    description: event.description.flatMap { $0.isEmpty ? nil : $0 },
+                    created: event.created.map { Date(timeIntervalSince1970: $0) },
+                    owner: event.owner,
+                    participants: participants.sorted { a, b in
+                        if a.isSelf != b.isSelf { return a.isSelf }
+                        if a.isAdmin != b.isAdmin { return a.isAdmin }
+                        let x = a.name.hasPrefix("~"), y = b.name.hasPrefix("~")
+                        if x != y { return !x }
+                        return a.name.localizedStandardCompare(b.name) == .orderedAscending
+                    }
+                )
             case "deleted":
                 guard let jid = event.jid else { continue }
                 removeChats([jid])

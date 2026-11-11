@@ -251,26 +251,102 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 }
 
 struct SettingsSheet: View {
+    @Environment(AccountManager.self) private var accounts
+    @Environment(\.dismiss) private var dismiss
     let account: AccountInfo
     @State private var section: SettingsSection = .visual
+    @State private var original: (theme: String?, follows: Bool)?
+
+    private var info: AccountInfo? {
+        accounts.accounts.first { $0.id == account.id }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 14) {
-                Text("Configurações")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                SheetHeader(title: "Configurações", onClose: cancel)
                 SettingsTabs(selection: $section)
             }
-            .padding(.top, 18)
             .padding(.bottom, 16)
             Divider()
             switch section {
             case .visual:
                 VisualSettings(account: account)
             }
+            SheetFooter(onCancel: cancel) { dismiss() }
         }
         .frame(width: 560, height: 660)
+        .onAppear {
+            guard original == nil else { return }
+            original = (info?.theme, info?.plainAccent != true)
+        }
+    }
+
+    private func cancel() {
+        if let original {
+            accounts.setTheme(account.id, hex: original.theme)
+            accounts.setAccentFollowsTheme(account.id, original.follows)
+        }
+        dismiss()
+    }
+}
+
+struct SheetHeader: View {
+    let title: String
+    let onClose: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        ZStack {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(hovering ? Color.primary : Color.secondary)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(Color.primary.opacity(hovering ? 0.14 : 0.08)))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+                .help("Fechar")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+    }
+}
+
+struct SheetFooter: View {
+    var confirmTitle = "Concluído"
+    var onCancel: (() -> Void)?
+    let onConfirm: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 10) {
+                Spacer()
+                if let onCancel {
+                    Button("Cancelar", action: onCancel)
+                        .buttonStyle(PillButtonStyle())
+                        .pointerStyle(.link)
+                        .keyboardShortcut(.cancelAction)
+                }
+                Button(confirmTitle, action: onConfirm)
+                    .buttonStyle(PillButtonStyle(prominent: true))
+                    .pointerStyle(.link)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+        }
     }
 }
 
@@ -313,7 +389,7 @@ private struct SettingsTabs: View {
     }
 }
 
-private struct SettingsGroup<Content: View>: View {
+struct SettingsGroup<Content: View>: View {
     let title: String
     var subtitle: String?
     @ViewBuilder let content: Content
@@ -340,7 +416,7 @@ private struct SettingsGroup<Content: View>: View {
     }
 }
 
-private struct PillButtonStyle: ButtonStyle {
+struct PillButtonStyle: ButtonStyle {
     var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
@@ -391,10 +467,8 @@ private struct SwatchButton: View {
 
 struct VisualSettings: View {
     @Environment(AccountManager.self) private var accounts
-    @Environment(\.dismiss) private var dismiss
     let account: AccountInfo
     @State private var showCustom = false
-    @State private var original: (theme: String?, follows: Bool)?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4, alignment: .top), count: 6)
 
@@ -444,33 +518,7 @@ struct VisualSettings: View {
                 .padding(.vertical, 24)
                 .thinScrollers()
             }
-            Divider()
-            HStack(spacing: 10) {
-                Spacer()
-                Button("Cancelar", action: cancel)
-                    .buttonStyle(PillButtonStyle())
-                    .pointerStyle(.link)
-                    .keyboardShortcut(.cancelAction)
-                Button("Concluído") { dismiss() }
-                    .buttonStyle(PillButtonStyle(prominent: true))
-                    .pointerStyle(.link)
-                    .keyboardShortcut(.defaultAction)
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
         }
-        .onAppear {
-            guard original == nil else { return }
-            original = (info?.theme, info?.plainAccent != true)
-        }
-    }
-
-    private func cancel() {
-        if let original {
-            accounts.setTheme(account.id, hex: original.theme)
-            accounts.setAccentFollowsTheme(account.id, original.follows)
-        }
-        dismiss()
     }
 
     private var accentRow: some View {
