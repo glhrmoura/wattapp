@@ -866,6 +866,8 @@ func (b *bridge) handle(raw any) {
 			}
 			b.emit(out)
 		}
+	case *events.OfflineSyncCompleted:
+		b.emit(outEvent{"type": "offline_synced"})
 	case *events.Connected:
 		b.emitConnected()
 		go b.syncAllSettings()

@@ -98,11 +98,12 @@ final class AccountManager {
     }
 
     func unread(for account: AccountInfo) -> Int {
-        stores[account.id]?.unreadTotal ?? 0
+        guard let store = stores[account.id], store.isSynced else { return 0 }
+        return store.unreadTotal
     }
 
     func hasUnread(for account: AccountInfo) -> Bool {
-        guard let store = stores[account.id] else { return false }
+        guard let store = stores[account.id], store.isSynced else { return false }
         return store.unreadTotal > 0 || store.archivedUnreadCount > 0 || store.lockedUnreadCount > 0
     }
 

@@ -62,6 +62,8 @@ final class ChatStore {
     @ObservationIgnored private var bridge: WhatsAppBridge?
     @ObservationIgnored private var indexByID: [String: Int] = [:]
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var settleTask: Task<Void, Never>?
+    private(set) var isSynced = false
     @ObservationIgnored let baseURL: URL
     @ObservationIgnored private var cacheURL: URL { baseURL.appendingPathComponent("wa-chats.json") }
     @ObservationIgnored private var databaseURL: URL { baseURL.appendingPathComponent("whatsapp.db") }
@@ -74,6 +76,17 @@ final class ChatStore {
         hasSession = Self.hasPairedDevice(at: baseURL.appendingPathComponent("whatsapp.db").path)
         loadCache()
         startBridge()
+        settle(after: .seconds(hasSession ? 20 : 0))
+    }
+
+    private func settle(after delay: Duration) {
+        guard !isSynced else { return }
+        settleTask?.cancel()
+        settleTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.isSynced = true
+        }
     }
 
     var unreadTotal: Int {
@@ -601,6 +614,8 @@ final class ChatStore {
                     bridge?.send(["cmd": "resolve", "chat": chat.id])
                     requestAvatar(chat)
                 }
+            case "offline_synced":
+                settle(after: .seconds(1.5))
             case "disconnected":
                 if isConnected { connection = .starting }
             case "logged_out":
