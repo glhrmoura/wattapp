@@ -595,6 +595,11 @@ struct StatusTicks: View {
     let status: DeliveryStatus
 
     var body: some View {
+        ticks.alignmentGuide(.firstTextBaseline) { $0[.bottom] }
+    }
+
+    @ViewBuilder
+    private var ticks: some View {
         switch status {
         case .failed:
             Image(systemName: "exclamationmark.circle.fill").font(.caption2).foregroundStyle(.red)

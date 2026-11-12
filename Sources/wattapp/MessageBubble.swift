@@ -75,7 +75,7 @@ struct MessageBubble: View {
                                 .padding(.bottom, 4)
                         }
                         media(image, maxSide: 180)
-                        HStack(spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(message.date.formatted(date: .omitted, time: .shortened))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
@@ -282,7 +282,7 @@ struct MessageBubble: View {
                         .padding(.top, -3)
                         .padding(.bottom, 2)
                 }
-                textBody(message.text, fill: linkPreview != nil)
+                textBody(message.text, fill: linkPreview != nil || quote != nil)
             }
         }
     }
@@ -411,7 +411,7 @@ struct MessageBubble: View {
     private var isEdited: Bool { (message.edited ?? false) && !(message.revoked ?? false) }
 
     private var timestamp: some View {
-        HStack(spacing: 3) {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
             if isEdited {
                 Text("Editada")
                     .font(.caption2)

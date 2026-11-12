@@ -86,7 +86,9 @@ struct QuoteStack: Layout {
         guard let first = subviews.first else { return 0 }
         var result = min(first.sizeThatFits(.unspecified).width, limit)
         for view in subviews.dropFirst() {
-            result = max(result, view.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil)).width)
+            let natural = view.sizeThatFits(.unspecified).width
+            let fitted = view.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil)).width
+            result = max(result, min(natural, fitted))
         }
         return min(result, limit)
     }

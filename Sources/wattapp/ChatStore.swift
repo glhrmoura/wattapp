@@ -64,6 +64,11 @@ final class ChatStore {
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var settleTask: Task<Void, Never>?
     private(set) var isSynced = false
+    @ObservationIgnored private var holdsEvents = false
+    @ObservationIgnored private var heldEvents: [BridgeEvent] = []
+    private static let immediateEvents: Set<String> = [
+        "qr", "qr_timeout", "paired", "connected", "offline_synced", "disconnected", "logged_out", "error"
+    ]
     @ObservationIgnored let baseURL: URL
     @ObservationIgnored private var cacheURL: URL { baseURL.appendingPathComponent("wa-chats.json") }
     @ObservationIgnored private var databaseURL: URL { baseURL.appendingPathComponent("whatsapp.db") }
@@ -75,6 +80,7 @@ final class ChatStore {
         deletedIDs = Set(UserDefaults.standard.stringArray(forKey: "deletedChats.\(accountID)") ?? [])
         hasSession = Self.hasPairedDevice(at: baseURL.appendingPathComponent("whatsapp.db").path)
         loadCache()
+        holdsEvents = hasSession
         startBridge()
         settle(after: .seconds(hasSession ? 20 : 0))
     }
@@ -85,8 +91,24 @@ final class ChatStore {
         settleTask = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
+            self?.releaseHeldEvents()
             self?.isSynced = true
         }
+    }
+
+    private func ingest(_ events: [BridgeEvent]) {
+        guard holdsEvents else { return apply(events) }
+        let immediate = events.filter { Self.immediateEvents.contains($0.type) }
+        heldEvents += events.filter { !Self.immediateEvents.contains($0.type) }
+        if !immediate.isEmpty { apply(immediate) }
+        if immediate.contains(where: { $0.type == "offline_synced" }) { releaseHeldEvents() }
+    }
+
+    private func releaseHeldEvents() {
+        holdsEvents = false
+        let held = heldEvents
+        heldEvents = []
+        if !held.isEmpty { apply(held) }
     }
 
     var unreadTotal: Int {
@@ -169,7 +191,7 @@ final class ChatStore {
         connection = .starting
         let bridge = WhatsAppBridge(
             onEvents: { [weak self] events in
-                Task { @MainActor in self?.apply(events) }
+                Task { @MainActor in self?.ingest(events) }
             },
             onExit: { [weak self] status in
                 Task { @MainActor in self?.bridgeExited(status) }
@@ -916,6 +938,8 @@ final class ChatStore {
 
     private func handleLoggedOut() {
         bridge?.stop()
+        holdsEvents = false
+        heldEvents = []
         try? FileManager.default.removeItem(at: databaseURL)
         for suffix in ["-wal", "-shm"] {
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: databaseURL.path + suffix))
