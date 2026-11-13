@@ -815,9 +815,15 @@ struct SelectionCheck: View {
 }
 
 struct DeleteConfirmation: View {
-    let count: Int
-    let canRevoke: Bool
+    @State private var count: Int
+    @State private var canRevoke: Bool
     var onDelete: (Bool) -> Void
+
+    init(count: Int, canRevoke: Bool, onDelete: @escaping (Bool) -> Void) {
+        _count = State(initialValue: count)
+        _canRevoke = State(initialValue: canRevoke)
+        self.onDelete = onDelete
+    }
 
     var body: some View {
         VStack(spacing: 10) {
