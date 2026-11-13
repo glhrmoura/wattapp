@@ -14,6 +14,7 @@ struct ConversationView: View {
     @State private var growDown = false
     @State private var selected = Set<Message.ID>()
     @State private var confirmDelete = false
+    @State private var pendingDeleteForEveryone: Bool?
     @State private var forwarding: [Message] = []
     @State private var showForward = false
     @State private var undoable: [Message] = []
@@ -609,6 +610,14 @@ struct ConversationView: View {
         confirmDelete = false
     }
 
+    private func performPendingDelete() {
+        guard let forEveryone = pendingDeleteForEveryone else { return }
+        pendingDeleteForEveryone = nil
+        let removed = store.deleteMessages(selected, in: chatID, forEveryone: forEveryone)
+        stopSelecting()
+        if !removed.isEmpty { showUndo(removed) }
+    }
+
     private func selectionBar(_ chat: Chat) -> some View {
         let chosen = chat.messages.filter { selected.contains($0.id) }
         let canRevoke = !chosen.isEmpty && chosen.allSatisfy { $0.isOutgoing && !($0.revoked ?? false) }
@@ -653,10 +662,10 @@ struct ConversationView: View {
             .help("Apagar")
             .popover(isPresented: $confirmDelete, arrowEdge: .top) {
                 DeleteConfirmation(count: selected.count, canRevoke: canRevoke) { forEveryone in
-                    let removed = store.deleteMessages(selected, in: chatID, forEveryone: forEveryone)
-                    stopSelecting()
-                    if !removed.isEmpty { showUndo(removed) }
+                    pendingDeleteForEveryone = forEveryone
+                    confirmDelete = false
                 }
+                .onDisappear(perform: performPendingDelete)
             }
         }
         .padding(.horizontal, 16)
@@ -815,15 +824,9 @@ struct SelectionCheck: View {
 }
 
 struct DeleteConfirmation: View {
-    @State private var count: Int
-    @State private var canRevoke: Bool
+    let count: Int
+    let canRevoke: Bool
     var onDelete: (Bool) -> Void
-
-    init(count: Int, canRevoke: Bool, onDelete: @escaping (Bool) -> Void) {
-        _count = State(initialValue: count)
-        _canRevoke = State(initialValue: canRevoke)
-        self.onDelete = onDelete
-    }
 
     var body: some View {
         VStack(spacing: 10) {
