@@ -644,13 +644,17 @@ struct TickShape: Shape {
 
 struct DeleteChatDialog: View {
     @Environment(ChatStore.self) private var store
+    @State private var ids: Set<Chat.ID>
+    @State private var title: String
 
-    private var title: String {
+    init(store: ChatStore) {
         let ids = store.pendingDelete
+        _ids = State(initialValue: ids)
         if ids.count == 1, let id = ids.first, let chat = store.chat(id) {
-            return "Deseja apagar a conversa com \(chat.displayTitle)?"
+            _title = State(initialValue: "Deseja apagar a conversa com \(chat.displayTitle)?")
+        } else {
+            _title = State(initialValue: "Deseja apagar \(ids.count) conversas?")
         }
-        return "Deseja apagar \(ids.count) conversas?"
     }
 
     var body: some View {
@@ -661,12 +665,12 @@ struct DeleteChatDialog: View {
                 .padding(.horizontal, 6)
                 .padding(.bottom, 10)
             button("Apagar conversa", color: Color(red: 0.95, green: 0.3, blue: 0.3), fill: Color(red: 0.55, green: 0.18, blue: 0.18).opacity(0.75)) {
-                store.delete(store.pendingDelete)
+                store.delete(ids)
                 store.pendingDelete = []
             }
             .keyboardShortcut(.defaultAction)
             button("Arquivar", color: .primary, fill: Color.primary.opacity(0.1)) {
-                for id in store.pendingDelete where store.chat(id)?.isArchived == false {
+                for id in ids where store.chat(id)?.isArchived == false {
                     store.toggleArchive(id)
                 }
                 store.pendingDelete = []

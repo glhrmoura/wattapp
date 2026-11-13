@@ -111,7 +111,7 @@ struct ContentView: View {
                     Color.black.opacity(0.45)
                         .ignoresSafeArea()
                         .onTapGesture { store.pendingDelete = [] }
-                    DeleteChatDialog()
+                    DeleteChatDialog(store: store)
                         .transition(.scale(scale: 0.95).combined(with: .opacity))
                 }
             }

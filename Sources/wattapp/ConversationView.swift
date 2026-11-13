@@ -14,7 +14,6 @@ struct ConversationView: View {
     @State private var growDown = false
     @State private var selected = Set<Message.ID>()
     @State private var confirmDelete = false
-    @State private var pendingDeleteForEveryone: Bool?
     @State private var forwarding: [Message] = []
     @State private var showForward = false
     @State private var undoable: [Message] = []
@@ -610,14 +609,6 @@ struct ConversationView: View {
         confirmDelete = false
     }
 
-    private func performPendingDelete() {
-        guard let forEveryone = pendingDeleteForEveryone else { return }
-        pendingDeleteForEveryone = nil
-        let removed = store.deleteMessages(selected, in: chatID, forEveryone: forEveryone)
-        stopSelecting()
-        if !removed.isEmpty { showUndo(removed) }
-    }
-
     private func selectionBar(_ chat: Chat) -> some View {
         let chosen = chat.messages.filter { selected.contains($0.id) }
         let canRevoke = !chosen.isEmpty && chosen.allSatisfy { $0.isOutgoing && !($0.revoked ?? false) }
@@ -662,12 +653,9 @@ struct ConversationView: View {
             .help("Apagar")
             .popover(isPresented: $confirmDelete, arrowEdge: .top) {
                 DeleteConfirmation(count: selected.count, canRevoke: canRevoke) { forEveryone in
-                    pendingDeleteForEveryone = forEveryone
-                    confirmDelete = false
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(350))
-                        performPendingDelete()
-                    }
+                    let removed = store.deleteMessages(selected, in: chatID, forEveryone: forEveryone)
+                    stopSelecting()
+                    if !removed.isEmpty { showUndo(removed) }
                 }
             }
         }
@@ -837,15 +825,10 @@ struct DeleteConfirmation: View {
         self.onDelete = onDelete
     }
 
-    private var height: CGFloat {
-        canRevoke ? 150 : 100
-    }
-
     var body: some View {
         VStack(spacing: 10) {
             Text(count == 1 ? "Deseja apagar a mensagem?" : "Deseja apagar \(count) mensagens?")
                 .font(.system(size: 14, weight: .bold))
-                .frame(height: 18)
                 .padding(.top, 4)
             if canRevoke {
                 row("Apagar para todos") { onDelete(true) }
@@ -853,8 +836,7 @@ struct DeleteConfirmation: View {
             row("Apagar para mim") { onDelete(false) }
         }
         .padding(14)
-        .frame(width: 320, height: height, alignment: .top)
-        .fixedSize()
+        .frame(width: 320)
     }
 
     private func row(_ title: String, action: @escaping () -> Void) -> some View {
