@@ -840,6 +840,7 @@ struct DeleteConfirmation: View {
         }
         .padding(14)
         .frame(width: 320)
+        .fixedSize()
     }
 
     private func row(_ title: String, action: @escaping () -> Void) -> some View {
