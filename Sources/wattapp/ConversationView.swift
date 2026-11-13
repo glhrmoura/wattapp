@@ -664,8 +664,11 @@ struct ConversationView: View {
                 DeleteConfirmation(count: selected.count, canRevoke: canRevoke) { forEveryone in
                     pendingDeleteForEveryone = forEveryone
                     confirmDelete = false
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        performPendingDelete()
+                    }
                 }
-                .onDisappear(perform: performPendingDelete)
             }
         }
         .padding(.horizontal, 16)
@@ -824,14 +827,25 @@ struct SelectionCheck: View {
 }
 
 struct DeleteConfirmation: View {
-    let count: Int
-    let canRevoke: Bool
+    @State private var count: Int
+    @State private var canRevoke: Bool
     var onDelete: (Bool) -> Void
+
+    init(count: Int, canRevoke: Bool, onDelete: @escaping (Bool) -> Void) {
+        _count = State(initialValue: count)
+        _canRevoke = State(initialValue: canRevoke)
+        self.onDelete = onDelete
+    }
+
+    private var height: CGFloat {
+        canRevoke ? 150 : 100
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             Text(count == 1 ? "Deseja apagar a mensagem?" : "Deseja apagar \(count) mensagens?")
                 .font(.system(size: 14, weight: .bold))
+                .frame(height: 18)
                 .padding(.top, 4)
             if canRevoke {
                 row("Apagar para todos") { onDelete(true) }
@@ -839,7 +853,7 @@ struct DeleteConfirmation: View {
             row("Apagar para mim") { onDelete(false) }
         }
         .padding(14)
-        .frame(width: 320)
+        .frame(width: 320, height: height, alignment: .top)
         .fixedSize()
     }
 
