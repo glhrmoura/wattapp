@@ -398,7 +398,7 @@ struct MessageBubble: View {
                 }
                     .frame(maxWidth: fill ? .infinity : nil, alignment: .leading)
             } else {
-                Text(shown + padding)
+                (Text(shown + padding) + Text(".").foregroundColor(.clear))
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: fill ? .infinity : nil, alignment: .leading)

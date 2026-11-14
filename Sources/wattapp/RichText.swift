@@ -67,6 +67,7 @@ enum RichText {
         }
         guard changed else { return nil }
         result.append(NSAttributedString(string: trailing, attributes: [.font: font]))
+        result.append(NSAttributedString(string: ".", attributes: [.font: font, .foregroundColor: NSColor.clear]))
         return result
     }
 
