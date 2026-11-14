@@ -385,7 +385,7 @@ struct MessageBubble: View {
     }
 
     private func textBody(_ text: String, fill: Bool = false) -> some View {
-        let padding = String(repeating: "\u{2007}", count: (message.isOutgoing ? 8 : 6) + (isEdited ? 6 : 0))
+        let padding = "\u{200B}" + String(repeating: "\u{2007}", count: (message.isOutgoing ? 8 : 6) + (isEdited ? 6 : 0))
         let short = expanded ? nil : RichText.truncated(text)
         let shown = short ?? text
         return ZStack(alignment: .bottomTrailing) {
